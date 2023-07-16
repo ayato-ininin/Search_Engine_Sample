@@ -14,12 +14,12 @@ import (
 
 var docInfo map[string]common.DocumentInfo
 var invertedIndex map[string][]string
+var entriesDefaultPath string
+var textsDefaultDir string
 
 // indexerで転置インデックスを作成後、
 // このプログラムを実行すると、全文検索ができる
 func main() {
-	var entriesDefaultPath string
-	var textsDefaultDir string
 	var err error
 
 	flag.StringVar(&entriesDefaultPath, "entriesDefaultPath", "./indexer/entries_sample.txt", "エントリーデフォルトパス")
@@ -88,7 +88,7 @@ func readUserInput(in io.Reader, doneChan chan bool) {
 			if i == 5 {
 				break
 			}
-			file, err := os.Open(fmt.Sprintf("%s/%s", "./indexer/texts", docId))
+			file, err := os.Open(fmt.Sprintf("%s/%s", textsDefaultDir, docId))
 			if err != nil {
 				log.Fatalf("failed to open %s: %v", docId, err)
 			}
