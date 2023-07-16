@@ -1,4 +1,4 @@
-package variablebytecode
+package variableByteCode
 
 import (
 	"bytes"

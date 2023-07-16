@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"encoding/gob"
 	"flag"
 	"fmt"
@@ -9,6 +8,7 @@ import (
 	"log"
 	"os"
 	"search_engine/variable_byte_code"
+	"search_engine/common"
 	"strings"
 
 	"github.com/ikawaha/kagome-dict/ipa"
@@ -23,10 +23,10 @@ func main() {
 	flag.StringVar(&textsDefaultDir, "textsDefaultDir", "./indexer/texts", "textが格納されているディレクトリ")
 	flag.Parse()
 
-	// titleとdocIdのマップを作成
-	titles := getTitleDocIdMap(entriesDefaultPath)
+	// docIdをキーにドキュメント情報MAPを作成
+	docInfo := common.GetDocumentInfoMap(entriesDefaultPath)
 	// 転置インデックスを作成
-	invertedIndex := createInvertedIndex(textsDefaultDir, titles)
+	invertedIndex := createInvertedIndex(textsDefaultDir, docInfo)
 
 	// 転置インデックスをシリアライズしてバイナリファイルに書き込む
 	indexFile, err := os.Create("./index.bin")
@@ -46,39 +46,7 @@ func main() {
 	fmt.Println("Create index.bin successfully!")
 }
 
-// titleとdocIdのマップを作成
-func getTitleDocIdMap(path string) map[string]string {
-		// ファイルを開く
-		file, err := os.Open(path)
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer file.Close()
-
-		// ファイルから一行ずつ読み込み
-		titles := make(map[string]string)
-		scanner := bufio.NewScanner(file)
-		for scanner.Scan() {
-			line := scanner.Text()
-			parts := strings.Split(line, "\t")  // タブで行を分割
-
-			if len(parts) < 4 {
-				continue
-			}
-
-			docID := parts[0]
-			title := parts[3]
-			titles[docID] = title
-		}
-
-		if err := scanner.Err(); err != nil {
-			log.Fatal(err)
-		}
-
-		return titles
-}
-
-func createInvertedIndex(path string, titles map[string]string) map[string][]string {
+func createInvertedIndex(path string, docInfo map[string]common.DocumentInfo) map[string][]string {
 	// 本文データがあるディレクトリを開く
 	// ディレクトリ内のファイルを一つずつ処理
 	files, err := ioutil.ReadDir(path)
@@ -89,7 +57,7 @@ func createInvertedIndex(path string, titles map[string]string) map[string][]str
 	// 転置インデックスを作成
 	invertedIndex := make(map[string][]string)
 	for _, file := range files {
-		title := titles[file.Name()]  // ファイル名からタイトルを取得
+		doc := docInfo[file.Name()]  // ファイル名からタイトルを取得
 		// fileの本文を読み込む
 		filePath := fmt.Sprintf("%s/%s", path, file.Name())
 		document, err := ioutil.ReadFile(filePath)
@@ -97,7 +65,7 @@ func createInvertedIndex(path string, titles map[string]string) map[string][]str
 			log.Fatal(err)
 		}
 		// titleとdocumentを結合
-		text := fmt.Sprintf("%s\n%s", title, document)
+		text := fmt.Sprintf("%s\n%s", doc.Title, document)
 		seg := getWakati(text)
 
 		// 転置インデックスを作成
@@ -110,7 +78,10 @@ func createInvertedIndex(path string, titles map[string]string) map[string][]str
 			if _, ok := invertedIndex[word]; !ok {
 				invertedIndex[word] = []string{file.Name()}
 			} else {
-				invertedIndex[word] = append(invertedIndex[word], file.Name())
+				// invertedIndex[word]にfile.Name()が存在しない場合のみ追加
+				if !common.Contains(invertedIndex[word], file.Name()) {
+					invertedIndex[word] = append(invertedIndex[word], file.Name())
+				}
 			}
 		}
 	}
@@ -134,7 +105,7 @@ func getWakati(text string) []string {
 func sortAndEncodeIndex(invertedIndex map[string][]string) map[string][]string {
 	// 転置インデックスをvbエンコード
 	for word, entries := range invertedIndex {
-		encodedEntries, err := variablebytecode.VariableByteEncode(entries)
+		encodedEntries, err := variableByteCode.VariableByteEncode(entries)
 		if err != nil {
 			log.Fatalf("Error encoding entries: %v", err)
 		}

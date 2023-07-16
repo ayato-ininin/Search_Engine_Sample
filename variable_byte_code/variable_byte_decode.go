@@ -1,6 +1,38 @@
-package variablebytecode
+package variableByteCode
 
-import "fmt"
+import (
+	"encoding/hex"
+	"fmt"
+	"strconv"
+)
+
+func VariableByteDecode(entries []string) ([]string, error) {
+	decodedEntries := make([]string, len(entries))
+	prevEntry := uint64(0)
+	for i, encodeEntry := range entries {
+		// encodeされた16進数エントリをバイトスライスに変換
+		encoded, err := hex.DecodeString(encodeEntry)
+		if err != nil {
+			fmt.Println("Error decoding entry:", err)
+			return nil, err
+		}
+
+		// バイトスライスをデコードして元の値を取得
+		gap, err := vByteDecode(encoded)
+		if err != nil {
+			fmt.Println("Error decoding entry:", err)
+			return nil, err
+		}
+
+		// ギャップ値を元のエントリに変換
+		entry := prevEntry + gap
+		prevEntry = entry
+
+		// デコードされたエントリを文字列に変換
+		decodedEntries[i] = strconv.FormatUint(entry, 10)
+	}
+	return decodedEntries, nil
+}
 
 // []byte{0xB8, 0x9E, 0x03}等くるので一つずつ処理
 func vByteDecode(data []byte) (uint64, error) {
