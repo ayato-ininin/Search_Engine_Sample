@@ -47,7 +47,6 @@ func main() {
 	// close the channel
 	close(doneChan)
 
-	// say goodbye
 	fmt.Println("Goodbye!")
 }
 
