@@ -54,7 +54,6 @@ func createInvertedIndex(path string, docInfo map[string]common.DocumentInfo) ma
 		log.Fatal(err)
 	}
 
-	// 転置インデックスを作成
 	invertedIndex := make(map[string][]string)
 	for _, file := range files {
 		doc := docInfo[file.Name()]  // ファイル名からタイトルを取得
